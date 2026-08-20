@@ -1,12 +1,17 @@
+cargo-features = ["codegen-backend"]
+
 [package]
 name = "pro-se"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy_enhanced_input = "0.26.0-rc.1"
-#bevy_transform_interpolation = "0.4"
-bevy_transform_interpolation = { git = "https://github.com/olukowski/bevy_transform_interpolation" }
+avian3d = { version = "0.7", features = ["simd"] }
+bevy_enhanced_input = "0.26"
+bevy_seedling = { version = "0.8", default-features = false, features = ["reflect", "rand", "symphonia", "ogg", "cpal", "hrtf", "hrtf_subjects"] }
+bevy_skein = { version = "0.6", default-features = false }
+bevy_sprinkles = "0.3"
+bevy_transform_interpolation = "0.5"
 log = { version = "*", features = [
     "max_level_debug",
     "release_max_level_warn",
@@ -17,14 +22,8 @@ tracing = { version = "*", features = [
     "release_max_level_warn",
 ] }
 
-[dependencies.avian3d]
-#version = "0.6"
-git = "https://github.com/olukowski/avian"
-features = ["simd"]
-
 [dependencies.bevy]
-version = "0.19.0-rc.3"
-
+version = "0.19"
 default-features = false
 features = [
     "default_app",
@@ -36,10 +35,25 @@ features = [
     "pbr_transmission_textures",
 ]
 
-[dependencies.bevy_skein]
-version = "0.6.0-rc.1"
-default-features = false
-
 [features]
 default = ["dev"]
-dev = ["bevy/dev", "bevy/pan_camera", "bevy_skein/brp", "bevy_skein/presets"]
+dev = ["bevy/dev", "bevy/pan_camera", "bevy_skein/brp", "bevy_skein/presets", "bevy_seedling/dev", "bevy_seedling/entity_names", "bevy_seedling/diagnostics"]
+
+[profile.dev]
+codegen-backend = "cranelift"
+incremental = true
+lto = "off"
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+codegen-backend = "llvm"
+opt-level = 2
+debug-assertions = true
+debug = "none"
+
+[profile.release]
+codegen-backend = "llvm"
+codegen-units = 1
+incremental = false
+lto = "fat"
+debug = 0

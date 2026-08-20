@@ -28,7 +28,7 @@ pub mod prelude {
             },
             world::DeferredWorld,
         },
-        light::{ShadowFilteringMethod, VolumetricFog, VolumetricLight},
+        light::{FogVolume, ShadowFilteringMethod, VolumetricFog, VolumetricLight},
         math::Affine3A,
         mesh::{Indices, MeshVertexBufferLayoutRef, PrimitiveTopology},
         pbr::{
@@ -58,6 +58,7 @@ pub mod prelude {
     };
     pub use bevy_enhanced_input::prelude::{self::*, Cancel, Press, Release};
     pub use bevy_skein::{SkeinAppExt as _, SkeinPlugin};
+    pub use bevy_sprinkles::prelude::*;
     pub use bevy_transform_interpolation::{RotationEasingState, ScaleEasingState, TranslationEasingState, prelude::*};
     pub use mimalloc_redirect::MiMalloc;
 }
@@ -113,6 +114,7 @@ fn main() -> AppExit {
             SkeinPlugin {
                 handle_brp: cfg!(feature = "dev"),
             },
+            SprinklesPlugin,
             (camera::plugin, control::plugin, environment::plugin, gfx::plugin),
         ))
         .init_state::<GameState>()

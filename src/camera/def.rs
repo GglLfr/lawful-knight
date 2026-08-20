@@ -6,8 +6,6 @@ use crate::prelude::*;
     IsDefaultUiCamera,
     GameCamera,
     Bloom,
-    ShadowFilteringMethod::Temporal,
-    Msaa::Off,
     TemporalAntiAliasing,
     ContrastAdaptiveSharpening,
     DebandDither::Enabled
@@ -19,6 +17,8 @@ pub struct PrimaryCamera;
 #[require(
     Camera3d,
     Hdr,
+    Msaa::Off,
+    ShadowFilteringMethod::Temporal,
     VolumetricFog {
         step_count: 64,
         ambient_intensity: 0.,
