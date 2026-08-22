@@ -20,16 +20,22 @@ pub struct SoundtrackState {
     pub entries: HashMap<Interned<dyn SoundtrackLabel>, Entity>,
 }
 
-#[derive(NodeLabel, PartialEq, Eq, Debug, Hash, Clone)]
+#[derive(Reflect, PoolLabel, PartialEq, Eq, Debug, Hash, Clone)]
+#[reflect(Component, PartialEq, Debug, Hash, Clone)]
+pub struct MusicPool;
+
+#[derive(Reflect, NodeLabel, PartialEq, Eq, Debug, Hash, Clone)]
+#[reflect(Component, PartialEq, Debug, Hash, Clone)]
 pub struct MusicBus;
 
-#[derive(PoolLabel, PartialEq, Eq, Debug, Hash, Clone)]
-pub struct MusicPool;
+#[derive(Reflect, NodeLabel, PartialEq, Eq, Debug, Hash, Clone)]
+#[reflect(Component, PartialEq, Debug, Hash, Clone)]
+pub struct MusicVolume;
 
 pub fn setup_player_bus(mut commands: Commands) {
     commands
-        .spawn((VolumeNode::default(), MusicBus))
-        .chain_node(MultibandCompressor::default());
+        .spawn((MultibandCompressor::default(), MusicBus))
+        .chain_node((VolumeNode::default(), MusicVolume));
     commands.spawn(SamplerPool(MusicPool)).connect(MusicBus);
 }
 

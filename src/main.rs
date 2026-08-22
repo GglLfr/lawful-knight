@@ -1,8 +1,9 @@
 pub mod prelude {
     pub use std::{
+        array,
         cell::RefCell,
         cmp::Ordering,
-        f32::consts::PI,
+        f32::consts::{PI, SQRT_2, TAU},
         mem::replace,
         num::{NonZeroU32, NonZeroUsize},
         ops::{Mul, Range},
@@ -70,7 +71,15 @@ pub mod prelude {
     pub use bevy_enhanced_input::prelude::{self::*, Cancel, Press, Release};
     pub use bevy_seedling::{
         firewheel::{
+            channel_config::ChannelConfig,
             collector::ArcGc,
+            core as firewheel_core,
+            diff::{Diff, Patch},
+            event::ProcEvents,
+            node::{
+                AudioNode, AudioNodeInfo, AudioNodeProcessor, ConstructProcessorContext, EmptyConfig, NodeError, ProcBuffers, ProcExtra, ProcInfo,
+                ProcessStatus,
+            },
             sample_resource::{SampleResource, SampleResourceInfo},
         },
         prelude::*,
