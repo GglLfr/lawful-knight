@@ -8,7 +8,13 @@ edition = "2024"
 [dependencies]
 avian3d = { version = "0.7", features = ["simd"] }
 bevy_enhanced_input = "0.26"
-bevy_seedling = { version = "0.8", default-features = false, features = ["reflect", "rand", "symphonia", "ogg", "cpal", "hrtf", "hrtf_subjects"] }
+bevy_seedling = { version = "0.8", default-features = false, features = [
+    "rand",
+    "ogg",
+    "cpal",
+    "hrtf",
+    "hrtf_subjects",
+] }
 bevy_skein = { version = "0.6", default-features = false }
 bevy_sprinkles = "0.3"
 bevy_transform_interpolation = "0.5"
@@ -17,6 +23,13 @@ log = { version = "*", features = [
     "release_max_level_warn",
 ] }
 mimalloc-redirect = "*"
+ron = "0.12"
+serde = { version = "1", features = ["derive"] }
+smallvec = { version = "1", features = [
+    "const_generics",
+    "const_new",
+    "union",
+] }
 tracing = { version = "*", features = [
     "max_level_debug",
     "release_max_level_warn",
@@ -37,7 +50,15 @@ features = [
 
 [features]
 default = ["dev"]
-dev = ["bevy/dev", "bevy/pan_camera", "bevy_skein/brp", "bevy_skein/presets", "bevy_seedling/dev", "bevy_seedling/entity_names", "bevy_seedling/diagnostics"]
+dev = [
+    "bevy/dev",
+    "bevy/pan_camera",
+    "bevy_skein/brp",
+    "bevy_skein/presets",
+    "bevy_seedling/dev",
+    "bevy_seedling/entity_names",
+    "bevy_seedling/diagnostics",
+]
 
 [profile.dev]
 codegen-backend = "cranelift"

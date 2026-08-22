@@ -6,7 +6,7 @@ pub mod prelude {
     pub use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
     pub use bevy::{
         anti_alias::{contrast_adaptive_sharpening::ContrastAdaptiveSharpening, taa::TemporalAntiAliasing},
-        asset::{AssetHandleProvider, RenderAssetUsages},
+        asset::{AssetHandleProvider, AssetLoader, LoadContext, ReflectAsset, RenderAssetUsages, io::Reader},
         camera::{
             CameraProjection, CameraUpdateSystems, Hdr, RenderTarget, SubCameraView,
             primitives::{Aabb, Frustum},
@@ -29,7 +29,7 @@ pub mod prelude {
             world::DeferredWorld,
         },
         light::{FogVolume, ShadowFilteringMethod, VolumetricFog, VolumetricLight},
-        math::Affine3A,
+        math::{Affine3A, Curve},
         mesh::{Indices, MeshVertexBufferLayoutRef, PrimitiveTopology},
         pbr::{
             DrawMaterial, DrawPrepass, ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline, Shadow, Transmissive3d,
@@ -57,19 +57,23 @@ pub mod prelude {
         window::{PrimaryWindow, WindowCreated, WindowResized, WindowScaleFactorChanged},
     };
     pub use bevy_enhanced_input::prelude::{self::*, Cancel, Press, Release};
+    pub use bevy_seedling::prelude::*;
     pub use bevy_skein::{SkeinAppExt as _, SkeinPlugin};
     pub use bevy_sprinkles::prelude::*;
     pub use bevy_transform_interpolation::{RotationEasingState, ScaleEasingState, TranslationEasingState, prelude::*};
     pub use mimalloc_redirect::MiMalloc;
+    pub use ron;
+    pub use serde::Deserialize;
 }
 
-use crate::{environment::portal::PortalCollisionHooks, prelude::*};
+use crate::{environment::portal::PortalCollisionHooks, prelude::*, soundtrack::SoundtrackPlayer};
 
 pub mod camera;
 pub mod control;
 pub mod environment;
 pub mod gfx;
 pub mod math;
+pub mod soundtrack;
 
 #[derive(Reflect, States, Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[reflect(State, Debug, Default, Clone, PartialEq, PartialOrd, Hash)]
@@ -111,11 +115,12 @@ fn main() -> AppExit {
             PhysicsPlugins::default().with_collision_hooks::<PortalCollisionHooks>(),
             //PhysicsDebugPlugin,
             EnhancedInputPlugin,
+            SeedlingPlugins,
             SkeinPlugin {
                 handle_brp: cfg!(feature = "dev"),
             },
             SprinklesPlugin,
-            (camera::plugin, control::plugin, environment::plugin, gfx::plugin),
+            (camera::plugin, control::plugin, environment::plugin, gfx::plugin, soundtrack::plugin),
         ))
         .init_state::<GameState>()
         .add_systems(Startup, game_init)
@@ -150,6 +155,8 @@ fn game_init(mut commands: Commands, server: Res<AssetServer>, mut next: ResMut<
         WorldAssetRoot(server.load(GltfAssetLabel::Scene(0).from_asset("zones/zone_master.gltf"))),
         ColliderConstructorHierarchy::new(ColliderConstructor::ConvexDecompositionFromMesh),
     ));
+
+    commands.spawn(SoundtrackPlayer(server.load("soundtracks/midway/behind_the_mirror.mus.ron")));
 
     /*let blocks = [
         /*[1, 0, 0, 0, 3, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],

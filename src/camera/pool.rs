@@ -160,7 +160,7 @@ pub fn update_pooled_dirty_images(
                 size.y,
                 match is_hdr {
                     false => TextureFormat::Rgba8UnormSrgb,
-                    true => ViewTarget::TEXTURE_FORMAT_HDR,
+                    true => TextureFormat::Rgba16Float,
                 },
                 None,
             )
