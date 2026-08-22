@@ -130,8 +130,9 @@ impl SampleResourceInfo for SoundtrackEntry {
 
 impl SampleResource for SoundtrackEntry {
     fn fill_buffers(&self, out_buffer: &mut [&mut [f32]], mut out_buffer_range: Range<usize>, mut start_frame: u64) -> usize {
+        const TAIL_BUFFER_LEN: usize = 1024;
         thread_local! {
-            static TAIL_BUFFER: RefCell<Vec<[f32; 1024]>> = const { RefCell::new(Vec::new()) };
+            static TAIL_BUFFER: RefCell<Vec<[f32; TAIL_BUFFER_LEN]>> = const { RefCell::new(Vec::new()) };
         }
 
         let channels = self.source.num_channels().get();
@@ -150,7 +151,7 @@ impl SampleResource for SoundtrackEntry {
             } else if actual_len > loop_marker && start_frame < actual_len - loop_marker {
                 // Long tracks, copy tail to start.
                 let len = TAIL_BUFFER.with_borrow_mut(|tail_buffers| {
-                    tail_buffers.resize(channels.max(tail_buffers.len()), [0.; 1024]);
+                    tail_buffers.resize(channels.max(tail_buffers.len()), [0.; TAIL_BUFFER_LEN]);
 
                     let mut refs = SmallVec::<[&mut [f32]; 32]>::with_capacity(channels);
                     for buf in tail_buffers {
@@ -159,7 +160,7 @@ impl SampleResource for SoundtrackEntry {
 
                     let tail_len = self
                         .source
-                        .fill_buffers(&mut refs, 0..out_buffer_range.len().min(1024), loop_marker + start_frame);
+                        .fill_buffers(&mut refs, 0..out_buffer_range.len().min(TAIL_BUFFER_LEN), loop_marker + start_frame);
                     let len = self.source.fill_buffers(
                         out_buffer,
                         out_buffer_range.start..out_buffer_range.end.min(out_buffer_range.start + tail_len),
