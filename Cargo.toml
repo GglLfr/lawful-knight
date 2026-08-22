@@ -9,6 +9,7 @@ edition = "2024"
 avian3d = { version = "0.7", features = ["simd"] }
 bevy_enhanced_input = "0.26"
 bevy_seedling = { version = "0.8", default-features = false, features = [
+    "reflect",
     "rand",
     "ogg",
     "cpal",
@@ -23,6 +24,7 @@ log = { version = "*", features = [
     "release_max_level_warn",
 ] }
 mimalloc-redirect = "*"
+rand = "0.10"
 ron = "0.12"
 serde = { version = "1", features = ["derive"] }
 smallvec = { version = "1", features = [

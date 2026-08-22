@@ -1,8 +1,6 @@
-use bevy::{asset::AsAssetId, ecs::intern::Interned};
-
 use crate::{
     prelude::*,
-    soundtrack::{Soundtrack, SoundtrackLabel},
+    soundtrack::{Soundtrack, SoundtrackLabel, effects::MultibandCompressor},
 };
 
 #[derive(Reflect, Component, Default, Debug, Clone)]
@@ -22,24 +20,36 @@ pub struct SoundtrackState {
     pub entries: HashMap<Interned<dyn SoundtrackLabel>, Entity>,
 }
 
+#[derive(NodeLabel, PartialEq, Eq, Debug, Hash, Clone)]
+pub struct MusicBus;
+
+#[derive(PoolLabel, PartialEq, Eq, Debug, Hash, Clone)]
+pub struct MusicPool;
+
+pub fn setup_player_bus(mut commands: Commands) {
+    commands
+        .spawn((VolumeNode::default(), MusicBus))
+        .chain_node(MultibandCompressor::default());
+    commands.spawn(SamplerPool(MusicPool)).connect(MusicBus);
+}
+
 pub fn insert_player_state(
     mut commands: Commands,
     soundtracks: Res<Assets<Soundtrack>>,
     players: Query<(Entity, &SoundtrackPlayer, &mut SoundtrackState), Or<(Changed<SoundtrackPlayer>, AssetChanged<SoundtrackPlayer>)>>,
 ) {
-    // TODO relationship between master and nodes
-    for (.., player, mut state) in players {
+    for (e, player, mut state) in players {
         for (.., e) in state.entries.drain() {
             commands.entity(e).try_despawn();
         }
 
         let Some(soundtrack) = soundtracks.get(&player.0) else { continue };
         for sample in soundtrack.entries.values() {
-            commands.spawn(SamplePlayer::new(sample.clone()).looping());
+            commands.spawn((ChildOf(e), SamplePlayer::new(sample.clone()).looping(), MusicPool));
         }
     }
 }
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_systems(PostUpdate, insert_player_state);
+    app.add_systems(Startup, setup_player_bus).add_systems(PostUpdate, insert_player_state);
 }

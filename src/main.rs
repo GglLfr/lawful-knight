@@ -1,12 +1,21 @@
 pub mod prelude {
-    pub use std::{cmp::Ordering, f32::consts::PI, mem::replace, ops::Mul, ptr::addr_eq};
+    pub use std::{
+        cell::RefCell,
+        cmp::Ordering,
+        f32::consts::PI,
+        mem::replace,
+        num::{NonZeroU32, NonZeroUsize},
+        ops::{Mul, Range},
+        path::PathBuf,
+        ptr::addr_eq,
+    };
 
     pub use avian3d::{physics_transform::PhysicsTransformSystems, prelude::*};
     #[cfg(feature = "dev")]
     pub use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
     pub use bevy::{
         anti_alias::{contrast_adaptive_sharpening::ContrastAdaptiveSharpening, taa::TemporalAntiAliasing},
-        asset::{AssetHandleProvider, AssetLoader, LoadContext, ReflectAsset, RenderAssetUsages, io::Reader},
+        asset::{AsAssetId, AssetHandleProvider, AssetLoader, AssetPath, LoadContext, ReflectAsset, RenderAssetUsages, io::Reader},
         camera::{
             CameraProjection, CameraUpdateSystems, Hdr, RenderTarget, SubCameraView,
             primitives::{Aabb, Frustum},
@@ -19,7 +28,9 @@ pub mod prelude {
         },
         ecs::{
             component::Mutable,
+            define_label,
             entity::{EntityHashMap, EntityHashSet},
+            intern::Interned,
             lifecycle::HookContext,
             query::{QueryData, QueryItem, ROQueryItem},
             system::{
@@ -57,13 +68,20 @@ pub mod prelude {
         window::{PrimaryWindow, WindowCreated, WindowResized, WindowScaleFactorChanged},
     };
     pub use bevy_enhanced_input::prelude::{self::*, Cancel, Press, Release};
-    pub use bevy_seedling::prelude::*;
+    pub use bevy_seedling::{
+        firewheel::{
+            collector::ArcGc,
+            sample_resource::{SampleResource, SampleResourceInfo},
+        },
+        prelude::*,
+    };
     pub use bevy_skein::{SkeinAppExt as _, SkeinPlugin};
     pub use bevy_sprinkles::prelude::*;
     pub use bevy_transform_interpolation::{RotationEasingState, ScaleEasingState, TranslationEasingState, prelude::*};
     pub use mimalloc_redirect::MiMalloc;
     pub use ron;
     pub use serde::Deserialize;
+    pub use smallvec::SmallVec;
 }
 
 use crate::{environment::portal::PortalCollisionHooks, prelude::*, soundtrack::SoundtrackPlayer};

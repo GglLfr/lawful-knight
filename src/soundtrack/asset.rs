@@ -1,20 +1,3 @@
-use std::{
-    cell::RefCell,
-    num::{NonZeroU32, NonZeroUsize},
-    ops::Range,
-    path::PathBuf,
-};
-
-use bevy::{
-    asset::AssetPath,
-    ecs::{define_label, intern::Interned},
-};
-use bevy_seedling::firewheel::{
-    collector::ArcGc,
-    sample_resource::{SampleResource, SampleResourceInfo},
-};
-use smallvec::SmallVec;
-
 use crate::prelude::*;
 
 define_label!(
@@ -36,7 +19,7 @@ macro_rules! soundtrack_label {
         $(#[path = $entry_path:expr] $entry_name:ident,)*
     }) => {
         $(#[$attr])*
-        #[derive(Debug, Eq)]
+        #[derive(Clone, Debug, Eq)]
         $vis enum $name {
             $($entry_name,)*
         }
@@ -44,14 +27,14 @@ macro_rules! soundtrack_label {
         impl ::std::cmp::PartialEq for $name {
             #[inline]
             fn eq(&self, other: &Self) -> bool {
-                ::std::cmp::PartialEq::eq(self.path(), other.path())
+                ::std::cmp::PartialEq::eq(crate::soundtrack::SoundtrackLabel::path(self), crate::soundtrack::SoundtrackLabel::path(other))
             }
         }
 
         impl ::std::hash::Hash for $name {
             #[inline]
             fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
-                self.path().hash(state)
+                crate::soundtrack::SoundtrackLabel::path(self).hash(state)
             }
         }
 
@@ -65,7 +48,7 @@ macro_rules! soundtrack_label {
 
             #[inline]
             fn dyn_clone(&self) -> ::std::boxed::Box<dyn crate::soundtrack::SoundtrackLabel> {
-                todo!()
+                ::std::boxed::Box::new(self.clone())
             }
         }
     };
