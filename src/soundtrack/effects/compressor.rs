@@ -20,8 +20,8 @@ pub struct MultibandCompressor {
 impl Default for MultibandCompressor {
     fn default() -> Self {
         Self {
-            freq_low_cutoff: 100.,
-            freq_high_cutoff: 2500.,
+            freq_low_cutoff: 200.,
+            freq_high_cutoff: 3000.,
         }
     }
 }
@@ -72,6 +72,7 @@ struct ChannelProcessor {
     low_comp: BandCompressor,
     mid_comp: BandCompressor,
     high_comp: BandCompressor,
+    master_comp: BandCompressor,
 }
 
 impl AudioNodeProcessor for MultibandCompressorProcessor {
@@ -92,22 +93,40 @@ impl AudioNodeProcessor for MultibandCompressorProcessor {
                 ChannelProcessor {
                     crossover: ThreeBandCrossover::new(info.sample_rate, self.params.freq_low_cutoff, self.params.freq_high_cutoff),
                     low_comp: BandCompressor::new(
-                        TransferFunction::new(vec![Vec2 { x: -80., y: -70. }, Vec2 { x: -30., y: -22. }, Vec2 { x: 0., y: -6. }]),
-                        rate,
-                        10.,
-                        100.,
-                    ),
-                    mid_comp: BandCompressor::new(
-                        TransferFunction::new(vec![Vec2 { x: -80., y: -65. }, Vec2 { x: -30., y: -20. }, Vec2 { x: 0., y: -4. }]),
-                        rate,
-                        5.,
-                        50.,
-                    ),
-                    high_comp: BandCompressor::new(
-                        TransferFunction::new(vec![Vec2 { x: -80., y: -60. }, Vec2 { x: -30., y: -18. }, Vec2 { x: 0., y: -3. }]),
+                        TransferFunction::new(vec![vec2(-80., -80.), vec2(0., 0.), vec2(12., 0.)]),
                         rate,
                         2.,
-                        25.,
+                        137.48,
+                        10.,
+                        5.,
+                        5.6,
+                    ),
+                    mid_comp: BandCompressor::new(
+                        TransferFunction::new(vec![vec2(-80., -80.), vec2(-3., -3.), vec2(12., 2.7)]),
+                        rate,
+                        2.,
+                        85.53,
+                        3.31,
+                        6.4,
+                        0.,
+                    ),
+                    high_comp: BandCompressor::new(
+                        TransferFunction::new(vec![vec2(-80., -80.), vec2(0., 0.), vec2(12., 0.)]),
+                        rate,
+                        2.,
+                        85.53,
+                        2.18,
+                        6.9,
+                        2.9,
+                    ),
+                    master_comp: BandCompressor::new(
+                        TransferFunction::new(vec![vec2(-80., -80.), vec2(0., 0.), vec2(12., 2.7)]),
+                        rate,
+                        2.,
+                        85.53,
+                        3.2,
+                        0.,
+                        0.,
                     ),
                 }
             });
@@ -115,7 +134,9 @@ impl AudioNodeProcessor for MultibandCompressorProcessor {
             let proc = &mut self.processors[i];
             for (input_sample, output_sample) in input.iter().zip(output.iter_mut()) {
                 let [low, mid, high] = proc.crossover.process(*input_sample);
-                *output_sample = proc.low_comp.process(low) + proc.mid_comp.process(mid) + proc.high_comp.process(high);
+                *output_sample = proc
+                    .master_comp
+                    .process(proc.low_comp.process(low) + proc.mid_comp.process(mid) + proc.high_comp.process(high));
             }
         }
 
@@ -246,34 +267,48 @@ impl TransferFunction {
 }
 
 #[derive(Debug, Clone)]
-struct BandCompressor {
+pub struct BandCompressor {
     transfer_func: TransferFunction,
     envelope: f32,
     attack_coeff: f32,
     release_coeff: f32,
+    pre_gain: f32,
+    post_gain: f32,
 }
 
 impl BandCompressor {
-    fn new(transfer_func: TransferFunction, sample_rate: f32, attack_ms: f32, release_ms: f32) -> Self {
+    pub fn new(
+        transfer_func: TransferFunction,
+        sample_rate: f32,
+        attack_ms: f32,
+        release_ms: f32,
+        _sustain_ms: f32,
+        pre_gain_db: f32,
+        post_gain_db: f32,
+    ) -> Self {
         Self {
             transfer_func,
             envelope: 0.,
             attack_coeff: (-1. / (attack_ms * 0.001 * sample_rate)).exp(),
             release_coeff: (-1. / (release_ms * 0.001 * sample_rate)).exp(),
+            pre_gain: 10f32.powf(pre_gain_db / 20.),
+            post_gain: 10f32.powf(post_gain_db / 20.),
         }
     }
 
     #[inline]
-    fn process(&mut self, input: f32) -> f32 {
-        let input_abs = input.abs();
-        if input_abs > self.envelope {
-            self.envelope = input_abs + self.attack_coeff * (self.envelope - input_abs);
+    pub fn process(&mut self, sample: f32) -> f32 {
+        let driven_sample = sample * self.pre_gain;
+        let abs_sample = driven_sample.abs();
+
+        if abs_sample > self.envelope {
+            self.envelope = abs_sample + self.attack_coeff * (self.envelope - abs_sample);
         } else {
-            self.envelope = input_abs + self.release_coeff * (self.envelope - input_abs);
+            self.envelope = abs_sample + self.release_coeff * (self.envelope - abs_sample);
         }
 
         if self.envelope < 1e-6 {
-            return input
+            return sample * self.post_gain
         }
 
         let db_in = 20. * self.envelope.log10();
@@ -281,7 +316,7 @@ impl BandCompressor {
         let db_gain = db_out - db_in;
         let linear_gain = 10f32.powf(db_gain / 20.);
 
-        input * linear_gain
+        driven_sample * linear_gain * self.post_gain
     }
 }
 
