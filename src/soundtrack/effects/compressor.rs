@@ -3,6 +3,7 @@ use crate::prelude::*;
 #[derive(Reflect, Component, Clone, PartialEq, Diff, Patch)]
 #[reflect(Component, Default, Clone, PartialEq)]
 pub struct MultibandCompressor {
+    pub freq_low_cut: f32,
     pub freq_low_cutoff: f32,
     pub freq_high_cutoff: f32,
     pub low: BandCompressor,
@@ -17,7 +18,9 @@ pub struct MultibandCompressor {
 
 impl Default for MultibandCompressor {
     fn default() -> Self {
+        // Maximus, Soundgoodizer Preset A
         Self {
+            freq_low_cut: 20.,
             freq_low_cutoff: 200.,
             freq_high_cutoff: 3000.,
             low: BandCompressor {
@@ -143,6 +146,7 @@ pub struct MultibandCompressorProcessor {
 
 #[derive(Debug, Clone)]
 struct ChannelProcessors {
+    low_cut: [BiquadFilter; 2],
     crossover: [ThreeBandCrossover; 2],
     low_comp: [BandCompressorState; 2],
     mid_comp: [BandCompressorState; 2],
@@ -153,6 +157,7 @@ struct ChannelProcessors {
 impl ChannelProcessors {
     fn new(sample_rate: NonZeroU32, params: &MultibandCompressor) -> Self {
         ChannelProcessors {
+            low_cut: [BiquadFilter::new(sample_rate, params.freq_low_cut, false); 2],
             crossover: [ThreeBandCrossover::new(sample_rate, params.freq_low_cutoff, params.freq_high_cutoff); 2],
             low_comp: array::repeat(BandCompressorState::new(sample_rate, &params.low)),
             mid_comp: array::repeat(BandCompressorState::new(sample_rate, &params.mid)),
@@ -180,6 +185,7 @@ impl AudioNodeProcessor for MultibandCompressorProcessor {
             return ProcessStatus::ClearAllOutputs
         };
 
+        let proc = &mut self.processors;
         for i in 0..info.frames {
             fn separate(l: f32, r: f32, sep: f32) -> [f32; 2] {
                 let mid = 0.5 * (l + r);
@@ -191,28 +197,28 @@ impl AudioNodeProcessor for MultibandCompressorProcessor {
                 [mid + adjusted_side, mid - adjusted_side]
             }
 
-            let [l, r] = [input_l[i], input_r[i]];
-            let [low_l, mid_l, high_l] = self.processors.crossover[0].process(l);
-            let [low_r, mid_r, high_r] = self.processors.crossover[1].process(r);
+            let [l, r] = [proc.low_cut[0].process(input_l[i]), proc.low_cut[1].process(input_r[i])];
+            let [low_l, mid_l, high_l] = proc.crossover[0].process(l);
+            let [low_r, mid_r, high_r] = proc.crossover[1].process(r);
 
             let [low_l, low_r] = separate(
-                self.processors.low_comp[0].process(low_l),
-                self.processors.low_comp[1].process(low_r),
+                proc.low_comp[0].process(low_l),
+                proc.low_comp[1].process(low_r),
                 self.params.low_stereo_separation,
             );
             let [mid_l, mid_r] = separate(
-                self.processors.mid_comp[0].process(mid_l),
-                self.processors.mid_comp[1].process(mid_r),
+                proc.mid_comp[0].process(mid_l),
+                proc.mid_comp[1].process(mid_r),
                 self.params.mid_stereo_separation,
             );
             let [high_l, high_r] = separate(
-                self.processors.high_comp[0].process(high_l),
-                self.processors.high_comp[1].process(high_r),
+                proc.high_comp[0].process(high_l),
+                proc.high_comp[1].process(high_r),
                 self.params.high_stereo_separation,
             );
             let [master_l, master_r] = separate(
-                self.processors.master_comp[0].process(low_l + mid_l + high_l),
-                self.processors.master_comp[1].process(low_r + mid_r + high_r),
+                proc.master_comp[0].process(low_l + mid_l + high_l),
+                proc.master_comp[1].process(low_r + mid_r + high_r),
                 self.params.master_stereo_separation,
             );
 
@@ -312,6 +318,8 @@ struct BandCompressorState {
     envelope: f32,
     attack_coeff: f32,
     release_coeff: f32,
+    sustain_samples: usize,
+    hold_counter: usize,
     pre_gain: f32,
     post_gain: f32,
 }
@@ -319,11 +327,14 @@ struct BandCompressorState {
 impl BandCompressorState {
     fn new(sample_rate: NonZeroU32, params: &BandCompressor) -> Self {
         let rate = sample_rate.get() as f32;
+        let sustain_samples = (params.sustain_ms * 0.001 * rate).round_ties_even() as usize;
         Self {
             curve: params.curve.clone(),
             envelope: 0.,
             attack_coeff: (-1. / (params.attack_ms * 0.001 * rate)).exp(),
             release_coeff: (-1. / (params.release_ms * 0.001 * rate)).exp(),
+            sustain_samples,
+            hold_counter: 0,
             pre_gain: params.pre_gain.amp(),
             post_gain: params.post_gain.amp(),
         }
@@ -334,8 +345,11 @@ impl BandCompressorState {
         let driven_sample = sample * self.pre_gain;
         let abs_sample = driven_sample.abs();
 
-        if abs_sample > self.envelope {
+        if abs_sample >= self.envelope {
             self.envelope = abs_sample + self.attack_coeff * (self.envelope - abs_sample);
+            self.hold_counter = self.sustain_samples;
+        } else if self.hold_counter > 0 {
+            self.hold_counter -= 1;
         } else {
             self.envelope = abs_sample + self.release_coeff * (self.envelope - abs_sample);
         }
