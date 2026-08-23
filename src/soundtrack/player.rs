@@ -45,14 +45,44 @@ pub fn insert_player_state(
     players: Query<(Entity, &SoundtrackPlayer, &mut SoundtrackState), Or<(Changed<SoundtrackPlayer>, AssetChanged<SoundtrackPlayer>)>>,
 ) {
     for (e, player, mut state) in players {
-        for (.., e) in state.entries.drain() {
-            commands.entity(e).try_despawn();
+        for &sample_entity in state.entries.values() {
+            commands.entity(sample_entity).trigger(|entity| PlaybackCompletion {
+                entity,
+                reason: CompletionReason::PlaybackInterrupted,
+            });
         }
 
         let Some(soundtrack) = soundtracks.get(&player.0) else { continue };
-        for sample in soundtrack.entries.values() {
-            commands.spawn((ChildOf(e), SamplePlayer::new(sample.clone()).looping(), MusicPool));
+        for (&key, sample) in &soundtrack.entries {
+            let sample_bundle = (
+                SamplePlayer::new(sample.clone()).looping(),
+                SamplePriority(10),
+                SamplerConfig {
+                    num_declickers: 0,
+                    ..default()
+                },
+                PlaybackSettings::default().preserve(),
+                MusicPool,
+            );
+
+            match state.entries.entry(key) {
+                Entry::Occupied(entry) => {
+                    commands.entity(*entry.get()).insert(sample_bundle);
+                }
+                Entry::Vacant(entry) => {
+                    entry.insert(commands.spawn((ChildOf(e), sample_bundle, sample_effects![VolumeNode::default()])).id());
+                }
+            }
         }
+
+        state.entries.retain(|key, &mut sample_entity| {
+            if soundtrack.entries.contains_key(key) {
+                true
+            } else {
+                commands.entity(sample_entity).despawn();
+                false
+            }
+        });
     }
 }
 

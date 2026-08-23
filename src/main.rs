@@ -82,6 +82,7 @@ pub mod prelude {
             },
             sample_resource::{SampleResource, SampleResourceInfo},
         },
+        pool::CompletionReason,
         prelude::*,
     };
     pub use bevy_skein::{SkeinAppExt as _, SkeinPlugin};
