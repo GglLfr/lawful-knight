@@ -32,11 +32,18 @@ pub struct MusicBus;
 #[reflect(Component, PartialEq, Debug, Hash, Clone)]
 pub struct MusicVolume;
 
+#[derive(EntityEvent, Debug, Clone, Copy)]
+pub struct SoundtrackPlayed {
+    pub entity: Entity,
+}
+
 pub fn setup_player_bus(mut commands: Commands) {
     commands
         .spawn((MultibandCompressor::default(), MusicBus))
         .chain_node((VolumeNode::default(), MusicVolume));
-    commands.spawn(SamplerPool(MusicPool)).connect(MusicBus);
+    commands
+        .spawn((SamplerPool(MusicPool), sample_effects![VolumeNode::default()]))
+        .connect(MusicBus);
 }
 
 pub fn insert_player_state(
@@ -56,7 +63,6 @@ pub fn insert_player_state(
         for (&key, sample) in &soundtrack.entries {
             let sample_bundle = (
                 SamplePlayer::new(sample.clone()).looping(),
-                SamplePriority(10),
                 SamplerConfig {
                     num_declickers: 0,
                     ..default()
@@ -70,7 +76,7 @@ pub fn insert_player_state(
                     commands.entity(*entry.get()).insert(sample_bundle);
                 }
                 Entry::Vacant(entry) => {
-                    entry.insert(commands.spawn((ChildOf(e), sample_bundle, sample_effects![VolumeNode::default()])).id());
+                    entry.insert(commands.spawn((ChildOf(e), sample_bundle)).id());
                 }
             }
         }
@@ -79,10 +85,12 @@ pub fn insert_player_state(
             if soundtrack.entries.contains_key(key) {
                 true
             } else {
-                commands.entity(sample_entity).despawn();
+                commands.entity(sample_entity).try_despawn();
                 false
             }
         });
+
+        commands.trigger(SoundtrackPlayed { entity: e });
     }
 }
 

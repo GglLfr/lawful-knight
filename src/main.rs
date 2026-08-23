@@ -94,7 +94,11 @@ pub mod prelude {
     pub use smallvec::SmallVec;
 }
 
-use crate::{environment::portal::PortalCollisionHooks, prelude::*, soundtrack::SoundtrackPlayer};
+use crate::{
+    environment::portal::PortalCollisionHooks,
+    prelude::*,
+    soundtrack::{SoundtrackPlayed, SoundtrackPlayer, SoundtrackState},
+};
 
 pub mod camera;
 pub mod control;
@@ -184,188 +188,72 @@ fn game_init(mut commands: Commands, server: Res<AssetServer>, mut next: ResMut<
         ColliderConstructorHierarchy::new(ColliderConstructor::ConvexDecompositionFromMesh),
     ));
 
-    commands.spawn(SoundtrackPlayer(server.load("soundtracks/midway/behind_the_mirror.mus.ron")));
+    #[cfg(feature = "dev")]
+    {
+        const ACTIVATED: Color = Color::srgba(0.2, 0.8, 0.3, 0.5);
+        const UNACTIVATED: Color = Color::srgba(0., 0., 0., 0.5);
 
-    /*let blocks = [
-        /*[1, 0, 0, 0, 3, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
-        [1, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],*/
-        [1, 9, 9, 9, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 9],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9],
-        [1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
-        [1, 0, 0, 0, 8, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
-        [1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
-        [1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        [9, 3, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-        [9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 9, 9, 9, 1],
-        /*[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [2, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 5],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 1, 1, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
-        [0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [3, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 4],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],*/
-    ];
+        let root = commands
+            .spawn_scene(bsn! {
+                Node {
+                    flex_direction: FlexDirection::Column
+                }
+            })
+            .id();
 
-    let mut portals = [Transform::IDENTITY; 6];
+        commands
+            .spawn(SoundtrackPlayer(server.load("soundtracks/midway/behind_the_mirror.mus.ron")))
+            .observe(
+                move |played: On<SoundtrackPlayed>, mut commands: Commands, state: Query<&SoundtrackState>| -> Result {
+                    let state = state.get(played.entity)?;
+                    for (key, &sample_entity) in &state.entries {
+                        use bevy::{
+                            picking::hover::Hovered,
+                            ui_widgets::{Activate, Button},
+                        };
 
-    let cube = meshes.add(Cuboid::from_size(Vec3::ONE).mesh());
-    let material = materials.add(ClipMaterial::default());
+                        let key_name = key.path().to_string();
+                        commands
+                            .spawn_scene(bsn! {
+                                ChildOf(root)
+                                Node {
+                                    padding: UiRect::all(px(16))
+                                }
+                                BackgroundColor(ACTIVATED)
+                                Button
+                                Hovered
+                                Children [
+                                    ~Text::new(key_name)
+                                ]
+                            })
+                            .observe(
+                                move |activated: On<Activate>,
+                                      mut query: Query<&mut BackgroundColor>,
+                                      effects: Query<&SampleEffects>,
+                                      mut volume: Query<&mut VolumeNode>|
+                                      -> Result {
+                                    let mut bg = query.get_mut(activated.entity)?;
+                                    let effects = effects.get(sample_entity)?;
 
-    let start_y = (blocks.len() - 1) as f32 / 2.;
-    for (dy, row) in blocks.into_iter().enumerate() {
-        let start_x = (row.len() - 1) as f32 / -2.;
-        for (dx, block) in row.into_iter().enumerate() {
-            let trns = Transform::from_xyz(start_x + dx as f32, start_y - dy as f32, 0.);
-            match block {
-                0 => {}
-                1 => {
-                    commands.spawn((
-                        trns.with_scale(vec3(1., 1., 3.)),
-                        Mesh3d(cube.clone()),
-                        MeshMaterial3d(material.clone()),
-                        RigidBody::Static,
-                        Collider::cuboid(1., 1., 1.),
-                    ));
-                }
-                /*2 => {
-                    portals[0] = trns
-                        .looking_to(Dir3::X, Dir3::Z)
-                        .with_translation(trns.translation + Vec3::X * 0.5)
-                        .with_scale(vec3(3., 3., 3.))
-                }
-                3 => {
-                    portals[1] = trns
-                        .looking_to(Dir3::NEG_Y, Dir3::Z)
-                        .with_translation(trns.translation + Vec3::Y * 0.5)
-                        .with_scale(vec3(7., 7., 7.))
-                }
-                4..=7 => {}*/
-                2 => {
-                    portals[0] = trns
-                        .looking_to(Dir3::X, Dir3::Z)
-                        .with_translation(trns.translation + Vec3::X * 0.499)
-                        .with_scale(vec3(3., 1., 1.))
-                }
-                3 => {
-                    portals[1] = trns
-                        .looking_to(Dir3::X, Dir3::Z)
-                        .with_translation(trns.translation - Vec3::X * 0.499)
-                        .with_scale(vec3(3., 1., 1.))
-                }
-                4 => {
-                    portals[2] = trns
-                        .looking_to(Dir3::NEG_Y, Dir3::Z)
-                        .with_translation(trns.translation + Vec3::Y * 0.499)
-                        .with_scale(vec3(3., 1., 1.))
-                }
-                5 => {
-                    portals[3] = trns
-                        .looking_to(Dir3::NEG_Y, Dir3::Z)
-                        .with_translation(trns.translation - Vec3::Y * 0.499)
-                        .with_scale(vec3(3., 1., 1.))
-                }
-                6..=7 => {}
-                //i @ 2..=5 => portals[i - 2] = trns.looking_to(Dir3::X, Dir3::Z),
-                //i @ 6..=7 => portals[i - 2] = trns.with_scale(vec3(16., 1., 1.)).looking_to(Dir3::Y, Dir3::Z),
-                8 => {
-                    commands.spawn((
-                        Mesh3d(meshes.add(Capsule3d {
-                            radius: 0.4,
-                            half_length: 0.4,
-                        })),
-                        MeshMaterial3d(material.clone()),
-                        PortalVisionViewer,
-                        trns,
-                        TransformExtrapolation,
-                        TransformHermiteEasing,
-                        RigidBody::Dynamic,
-                        SweptCcd::default(),
-                        Collider::capsule(0.4, 0.8),
-                        LockedAxes::ROTATION_LOCKED.lock_translation_z(),
-                    ));
-                }
-                9 => {
-                    commands.spawn((trns.with_scale(vec3(1., 1., 3.)), Mesh3d(cube.clone()), MeshMaterial3d(material.clone())));
-                }
-                unknown => panic!("Unknown block {unknown}"),
-            }
-        }
+                                    let volume = volume.get_effect_mut(effects)?.into_inner();
+                                    volume.volume = match volume.volume.linear() {
+                                        0. => {
+                                            bg.0 = ACTIVATED;
+                                            Volume::Linear(1.)
+                                        }
+                                        _ => {
+                                            bg.0 = UNACTIVATED;
+                                            Volume::Linear(0.)
+                                        }
+                                    };
+
+                                    Ok(())
+                                },
+                            );
+                    }
+
+                    Ok(())
+                },
+            );
     }
-
-    commands.insert_resource(ClearColor(Color::srgb(0.2, 0.2, 0.4)));
-
-    commands.spawn((
-        SpotLight {
-            intensity: 1_000_000.,
-            shadows_enabled: true,
-            range: 60.,
-            inner_angle: std::f32::consts::FRAC_PI_4,
-            outer_angle: std::f32::consts::FRAC_PI_3,
-            ..default()
-        },
-        VolumetricLight,
-        Transform::from_xyz(6., 6., 8.).looking_at(vec3(-6., -6., -4.), Dir3::Y),
-    ));
-
-    //let a = commands.spawn((portals[0], Portal::default())).id();
-    //commands.spawn((portals[1], Portal::default(), PortalTo(a)));
-
-    let a = commands.spawn((portals[0], Portal::default())).id();
-    //commands.spawn((portals[2], Portal::default(), PortalTo(a)));
-
-    let b = commands.spawn((portals[1], Portal::default())).id();
-    //commands.spawn((portals[3], Portal::default(), PortalTo(b)));
-
-    /*portals[0].translation += vec3(-0.5, 1., 0.);
-    portals[1].translation += vec3(-0.5, -1., 0.);
-    portals[2].translation += vec3(0.5, -1., 0.);
-    portals[3].translation += vec3(0.5, 1., 0.);
-    portals[4].translation += vec3(0.5, -1., 0.);
-    portals[5].translation += vec3(0.5, 1., 0.);
-
-    let a = commands
-        .spawn((portals[0], Portal::default(), Shift(portals[0].translation.y, false, false)))
-        .id();
-    let c = commands
-        .spawn((portals[2], Portal::default(), Shift(portals[2].translation.y, true, false)))
-        .id();
-    commands.entity(a).insert(PortalTo(c));
-
-    let b = commands
-        .spawn((portals[1], Portal::default(), Shift(portals[1].translation.y, false, true)))
-        .id();
-    let d = commands
-        .spawn((portals[3], Portal::default(), Shift(portals[3].translation.y, true, true)))
-        .id();
-    commands.entity(b).insert(PortalTo(d));*/
-    */
 }
