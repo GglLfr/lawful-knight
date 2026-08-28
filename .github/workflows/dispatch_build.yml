@@ -30,6 +30,8 @@ jobs:
         uses: dtolnay/rust-toolchain@nightly
 
       - name: Build release binary
+        env:
+          RUSTFLAGS: "-Znext-solver=coherence"
         run: cargo build --release
 
       - name: Set binary path variable
