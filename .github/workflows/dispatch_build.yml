@@ -1,0 +1,45 @@
+name: Build Pro Se
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository recursively
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install Rust Nightly Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Set binary path variable
+        id: set-binary
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            echo "binary=target/release/pro-se.exe" >> $GITHUB_OUTPUT
+          else
+            echo "binary=target/release/pro-se" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bundle and Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: pro-se-${{ matrix.os }}
+          path: |
+            assets/
+            !assets/editor/**/*
+            ${{ steps.set-binary.outputs.binary }}
