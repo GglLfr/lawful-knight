@@ -20,6 +20,12 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_ASSETS_TOKEN }}
 
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 libwayland-dev libxkbcommon-dev
+
       - name: Install Rust Nightly Toolchain
         uses: dtolnay/rust-toolchain@nightly
 
