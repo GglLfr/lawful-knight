@@ -9,17 +9,17 @@ soundtrack_label! {
         BassArp,
         #[path = "behind_the_mirror_bass.ogg"]
         Bass,
+        #[path = "behind_the_mirror_combat_bass.ogg"]
+        CombatBass,
+        #[path = "behind_the_mirror_combat_guitar.ogg"]
+        CombatGuitar,
+        #[path = "behind_the_mirror_combat_percussion.ogg"]
+        CombatPercussion,
         #[path = "behind_the_mirror_harp.ogg"]
         Harp,
-        #[path = "behind_the_mirror_pad.ogg"]
-        Pad,
-        #[path = "behind_the_mirror_viola.ogg"]
-        Viola,
-        #[path = "behind_the_mirror_violin_i.ogg"]
-        Violin,
-        #[path = "behind_the_mirror_violins_i.ogg"]
-        Violins,
-        #[path = "behind_the_mirror_whistle.ogg"]
-        Whistle,
+        #[path = "behind_the_mirror_string_section.ogg"]
+        StringSection,
+        #[path = "behind_the_mirror_string_solo.ogg"]
+        StringSolo,
     }
 }

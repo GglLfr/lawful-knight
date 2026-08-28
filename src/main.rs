@@ -38,6 +38,7 @@ pub mod prelude {
                 ReadOnlySystemParam, SystemParam, SystemParamItem,
                 lifetimeless::{Read, SRes, Write},
             },
+            template::TemplateContext,
             world::DeferredWorld,
         },
         light::{FogVolume, ShadowFilteringMethod, VolumetricFog, VolumetricLight},
@@ -94,10 +95,13 @@ pub mod prelude {
     pub use smallvec::SmallVec;
 }
 
+use bevy_seedling::sample::AudioLoaderConfig;
+use symphonia_adapter_libopus::OpusDecoder;
+
 use crate::{
     environment::portal::PortalCollisionHooks,
     prelude::*,
-    soundtrack::{SoundtrackPlayed, SoundtrackPlayer, SoundtrackState},
+    soundtrack::{SoundtrackPlay, SoundtrackPlayer, SoundtrackState},
 };
 
 pub mod camera;
@@ -125,7 +129,13 @@ fn report_mimalloc_version(_: &mut App) {
 }
 
 fn main() -> AppExit {
+    let mut config = AudioLoaderConfig::default();
+    config.register_codec(["ogg"], |registry, _| {
+        registry.register_audio_decoder::<OpusDecoder>();
+    });
+
     App::new()
+        .insert_resource(config)
         .add_plugins((
             DefaultPlugins.set(RenderPlugin {
                 render_creation: RenderCreation::from(WgpuSettings {
@@ -204,7 +214,7 @@ fn game_init(mut commands: Commands, server: Res<AssetServer>, mut next: ResMut<
         commands
             .spawn(SoundtrackPlayer(server.load("soundtracks/midway/behind_the_mirror.mus.ron")))
             .observe(
-                move |played: On<SoundtrackPlayed>, mut commands: Commands, state: Query<&SoundtrackState>| -> Result {
+                move |played: On<SoundtrackPlay>, mut commands: Commands, state: Query<&SoundtrackState>| -> Result {
                     let state = state.get(played.entity)?;
                     for (key, &sample_entity) in &state.entries {
                         use bevy::{
@@ -223,7 +233,7 @@ fn game_init(mut commands: Commands, server: Res<AssetServer>, mut next: ResMut<
                                 Button
                                 Hovered
                                 Children [
-                                    ~Text::new(key_name)
+                                    Text::new(key_name)
                                 ]
                             })
                             .observe(

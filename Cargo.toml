@@ -11,10 +11,10 @@ bevy_enhanced_input = "0.26"
 bevy_seedling = { version = "0.8", default-features = false, features = [
     "reflect",
     "rand",
-    "ogg",
     "cpal",
     "hrtf",
     "hrtf_subjects",
+    "ogg",
 ] }
 bevy_skein = { version = "0.6", default-features = false }
 bevy_sprinkles = "0.3"
@@ -32,6 +32,7 @@ smallvec = { version = "1", features = [
     "const_new",
     "union",
 ] }
+symphonia-adapter-libopus = "0.3"
 tracing = { version = "*", features = [
     "max_level_debug",
     "release_max_level_warn",

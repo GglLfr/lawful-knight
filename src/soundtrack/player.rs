@@ -3,7 +3,7 @@ use crate::{
     soundtrack::{Soundtrack, SoundtrackLabel, effects::MultibandCompressor},
 };
 
-#[derive(Reflect, Component, Default, Debug, Clone)]
+#[derive(Reflect, Component, FromTemplate, Default, Debug, Clone)]
 #[reflect(Component, Debug, Clone)]
 #[require(SoundtrackState)]
 pub struct SoundtrackPlayer(pub Handle<Soundtrack>);
@@ -15,25 +15,26 @@ impl AsAssetId for SoundtrackPlayer {
     }
 }
 
-#[derive(TypePath, Component, Default, Debug, Clone)]
+#[derive(Reflect, Component, Default, Debug, Clone)]
+#[reflect(opaque, Component, Default, Debug, Clone)]
 pub struct SoundtrackState {
     pub entries: HashMap<Interned<dyn SoundtrackLabel>, Entity>,
 }
 
-#[derive(Reflect, PoolLabel, PartialEq, Eq, Debug, Hash, Clone)]
+#[derive(Reflect, PoolLabel, FromTemplate, PartialEq, Eq, Debug, Hash, Clone)]
 #[reflect(Component, PartialEq, Debug, Hash, Clone)]
 pub struct MusicPool;
 
-#[derive(Reflect, NodeLabel, PartialEq, Eq, Debug, Hash, Clone)]
+#[derive(Reflect, NodeLabel, FromTemplate, PartialEq, Eq, Debug, Hash, Clone)]
 #[reflect(Component, PartialEq, Debug, Hash, Clone)]
 pub struct MusicBus;
 
-#[derive(Reflect, NodeLabel, PartialEq, Eq, Debug, Hash, Clone)]
+#[derive(Reflect, NodeLabel, FromTemplate, PartialEq, Eq, Debug, Hash, Clone)]
 #[reflect(Component, PartialEq, Debug, Hash, Clone)]
 pub struct MusicVolume;
 
 #[derive(EntityEvent, Debug, Clone, Copy)]
-pub struct SoundtrackPlayed {
+pub struct SoundtrackPlay {
     pub entity: Entity,
 }
 
@@ -42,7 +43,7 @@ pub fn setup_player_bus(mut commands: Commands) {
         .spawn((MultibandCompressor::default(), MusicBus))
         .chain_node((VolumeNode::default(), MusicVolume));
     commands
-        .spawn((SamplerPool(MusicPool), sample_effects![VolumeNode::default()]))
+        .spawn((SamplerPool(MusicPool), PoolSize(12..=36), sample_effects![VolumeNode::default()]))
         .connect(MusicBus);
 }
 
@@ -51,14 +52,7 @@ pub fn insert_player_state(
     soundtracks: Res<Assets<Soundtrack>>,
     players: Query<(Entity, &SoundtrackPlayer, &mut SoundtrackState), Or<(Changed<SoundtrackPlayer>, AssetChanged<SoundtrackPlayer>)>>,
 ) {
-    for (e, player, mut state) in players {
-        for &sample_entity in state.entries.values() {
-            commands.entity(sample_entity).trigger(|entity| PlaybackCompletion {
-                entity,
-                reason: CompletionReason::PlaybackInterrupted,
-            });
-        }
-
+    for (entity, player, mut state) in players {
         let Some(soundtrack) = soundtracks.get(&player.0) else { continue };
         for (&key, sample) in &soundtrack.entries {
             let sample_bundle = (
@@ -76,7 +70,7 @@ pub fn insert_player_state(
                     commands.entity(*entry.get()).insert(sample_bundle);
                 }
                 Entry::Vacant(entry) => {
-                    entry.insert(commands.spawn((ChildOf(e), sample_bundle)).id());
+                    entry.insert(commands.spawn((ChildOf(entity), sample_bundle)).id());
                 }
             }
         }
@@ -90,7 +84,7 @@ pub fn insert_player_state(
             }
         });
 
-        commands.trigger(SoundtrackPlayed { entity: e });
+        commands.trigger(SoundtrackPlay { entity });
     }
 }
 

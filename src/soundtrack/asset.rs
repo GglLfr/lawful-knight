@@ -1,3 +1,5 @@
+use std::{self, fmt::Debug};
+
 use crate::prelude::*;
 
 define_label!(
@@ -25,44 +27,48 @@ macro_rules! soundtrack_label {
         }
 
         impl ::std::cmp::PartialEq for $name {
-            #[inline]
             fn eq(&self, other: &Self) -> bool {
                 ::std::cmp::PartialEq::eq(crate::soundtrack::SoundtrackLabel::path(self), crate::soundtrack::SoundtrackLabel::path(other))
             }
         }
 
         impl ::std::hash::Hash for $name {
-            #[inline]
             fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
                 crate::soundtrack::SoundtrackLabel::path(self).hash(state)
             }
         }
 
         impl crate::soundtrack::SoundtrackLabel for $name {
-            #[inline]
             fn path(&self) -> &str {
                 match self {
                     $(Self::$entry_name => $entry_path,)*
                 }
             }
 
-            #[inline]
-            fn dyn_clone(&self) -> ::std::boxed::Box<dyn crate::soundtrack::SoundtrackLabel> {
-                ::std::boxed::Box::new(self.clone())
+            fn dyn_clone(&self) -> Box<dyn crate::soundtrack::SoundtrackLabel + 'static> {
+                Box::new(self.clone())
             }
         }
     };
 }
 
-impl SoundtrackLabel for String {
-    #[inline]
+impl SoundtrackLabel for &'static str {
     fn path(&self) -> &str {
         self
     }
 
-    #[inline]
-    fn dyn_clone(&self) -> Box<dyn SoundtrackLabel> {
-        Box::new(self.clone())
+    fn dyn_clone(&self) -> Box<dyn SoundtrackLabel + 'static> {
+        Box::new(*self)
+    }
+}
+
+impl SoundtrackLabel for String {
+    fn path(&self) -> &str {
+        self.as_str()
+    }
+
+    fn dyn_clone(&self) -> Box<dyn SoundtrackLabel + 'static> {
+        Box::new(&*String::leak(self.clone()))
     }
 }
 
