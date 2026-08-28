@@ -18,6 +18,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+          token: ${{ secrets.GH_ASSETS_TOKEN }}
 
       - name: Install Rust Nightly Toolchain
         uses: dtolnay/rust-toolchain@nightly
