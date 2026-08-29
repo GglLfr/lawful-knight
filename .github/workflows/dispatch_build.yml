@@ -18,6 +18,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+          lfs: true
           token: ${{ secrets.GH_ASSETS_TOKEN }}
 
       - name: Install Linux system dependencies
@@ -44,11 +45,17 @@ jobs:
             echo "binary=target/release/pro-se" >> $GITHUB_OUTPUT
           fi
 
+      - name: Prepare Artifact Directory
+        shell: bash
+        run: |
+          mkdir -p staging
+          cp -r assets staging/
+          rm -rf staging/assets/editor
+
+          cp "${{ steps.set-binary.outputs.binary }}" staging/
+
       - name: Bundle and Upload Artifacts
         uses: actions/upload-artifact@v7
         with:
           name: pro-se-${{ matrix.os }}
-          path: |
-            assets/
-            !assets/editor/**/*
-            ${{ steps.set-binary.outputs.binary }}
+          path: staging/
