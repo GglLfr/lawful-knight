@@ -8,6 +8,7 @@ edition = "2024"
 [dependencies]
 avian3d = { version = "0.7", features = ["simd"] }
 bevy_enhanced_input = "0.26"
+bevy_framepace = "0.22"
 bevy_seedling = { version = "0.8", default-features = false, features = [
     "reflect",
     "rand",
@@ -81,4 +82,5 @@ codegen-backend = "llvm"
 codegen-units = 1
 incremental = false
 lto = "fat"
+strip = true
 debug = 0

@@ -11,6 +11,8 @@ soundtrack_label! {
         Bass,
         #[path = "behind_the_mirror_combat_bass.ogg"]
         CombatBass,
+        #[path = "behind_the_mirror_combat_bells.ogg"]
+        CombatBells,
         #[path = "behind_the_mirror_combat_guitar.ogg"]
         CombatGuitar,
         #[path = "behind_the_mirror_combat_percussion.ogg"]

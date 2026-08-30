@@ -69,6 +69,7 @@ pub mod prelude {
         utils::Parallel,
         window::{PrimaryWindow, WindowCreated, WindowResized, WindowScaleFactorChanged},
     };
+    pub use bevy_framepace::FramepacePlugin;
     pub use bevy_enhanced_input::prelude::{self::*, Cancel, Press, Release};
     pub use bevy_seedling::{
         firewheel::{
@@ -154,6 +155,7 @@ fn main() -> AppExit {
                                              ..default()
                                          })*/
             report_mimalloc_version,
+            FramepacePlugin,
             PhysicsPlugins::default().with_collision_hooks::<PortalCollisionHooks>(),
             //PhysicsDebugPlugin,
             EnhancedInputPlugin,
@@ -193,10 +195,10 @@ fn move_around(time: Res<Time>, mut transforms: Query<(&mut Transform, &Shift)>)
 
 fn game_init(mut commands: Commands, server: Res<AssetServer>, mut next: ResMut<NextState<GameState>>) {
     next.set(GameState::InGame);
-    commands.spawn((
+    /*commands.spawn((
         WorldAssetRoot(server.load(GltfAssetLabel::Scene(0).from_asset("zones/zone_master.gltf"))),
         ColliderConstructorHierarchy::new(ColliderConstructor::ConvexDecompositionFromMesh),
-    ));
+    ));*/
 
     #[cfg(feature = "dev")]
     {
