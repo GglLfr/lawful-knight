@@ -5,7 +5,10 @@ use crate::prelude::*;
 #[require(
     IsDefaultUiCamera,
     GameCamera,
-    Bloom,
+    Bloom {
+        intensity: 0.2,
+        ..Bloom::NATURAL
+    },
     TemporalAntiAliasing,
     ContrastAdaptiveSharpening,
     DebandDither::Enabled
@@ -20,7 +23,6 @@ pub struct PrimaryCamera;
     Msaa::Off,
     ShadowFilteringMethod::Temporal,
     VolumetricFog {
-        step_count: 64,
         ambient_intensity: 0.,
         jitter: 0.64,
         ..default()

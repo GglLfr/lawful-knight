@@ -33,7 +33,7 @@ jobs:
       - name: Build release binary
         env:
           RUSTFLAGS: "-Znext-solver=coherence"
-        run: cargo build --release
+        run: cargo build --release --no-default-features
 
       - name: Set binary path variable
         id: set-binary

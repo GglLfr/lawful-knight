@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 #[derive(Reflect, Component, Clone, PartialEq, Diff, Patch)]
-#[reflect(Component, Default, Clone, PartialEq)]
+#[reflect(Component, Clone, PartialEq)]
 pub struct MultibandCompressor {
     pub freq_low_cut: f32,
     pub freq_low_cutoff: f32,
@@ -16,9 +16,8 @@ pub struct MultibandCompressor {
     pub master_stereo_separation: f32,
 }
 
-impl Default for MultibandCompressor {
-    fn default() -> Self {
-        // Maximus, Soundgoodizer Preset A
+impl MultibandCompressor {
+    pub fn maximus_preset_a() -> Self {
         Self {
             freq_low_cut: 20.,
             freq_low_cutoff: 200.,
@@ -89,7 +88,7 @@ impl BandCurve {
 
     pub fn evaluate(&self, x_in: f32) -> f32 {
         if self.points.is_empty() {
-            return x_in;
+            return x_in
         }
 
         if x_in <= self.points.first().unwrap().x {
@@ -114,7 +113,7 @@ impl BandCurve {
         let t = if p1.z.abs() < 1e-3 {
             linear_t
         } else {
-            let curvature = -p1.z * 6.;
+            let curvature = -p1.z * 5.;
             ((curvature * linear_t).exp() - 1.) / (curvature.exp() - 1.)
         };
 

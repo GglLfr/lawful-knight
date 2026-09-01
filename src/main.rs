@@ -1,9 +1,11 @@
 pub mod prelude {
     pub use std::{
         array,
+        borrow::Cow,
         cell::RefCell,
         cmp::Ordering,
         f32::consts::{PI, SQRT_2, TAU},
+        fmt::Debug,
         mem::replace,
         num::{NonZeroU32, NonZeroUsize},
         ops::{Mul, Range},
@@ -69,8 +71,8 @@ pub mod prelude {
         utils::Parallel,
         window::{PrimaryWindow, WindowCreated, WindowResized, WindowScaleFactorChanged},
     };
-    pub use bevy_framepace::FramepacePlugin;
     pub use bevy_enhanced_input::prelude::{self::*, Cancel, Press, Release};
+    pub use bevy_framepace::FramepacePlugin;
     pub use bevy_seedling::{
         firewheel::{
             channel_config::ChannelConfig,
@@ -195,10 +197,10 @@ fn move_around(time: Res<Time>, mut transforms: Query<(&mut Transform, &Shift)>)
 
 fn game_init(mut commands: Commands, server: Res<AssetServer>, mut next: ResMut<NextState<GameState>>) {
     next.set(GameState::InGame);
-    /*commands.spawn((
-        WorldAssetRoot(server.load(GltfAssetLabel::Scene(0).from_asset("zones/zone_master.gltf"))),
+    commands.spawn((
+        WorldAssetRoot(server.load(GltfAssetLabel::Scene(0).from_asset("zones/zone_midway.gltf"))),
         ColliderConstructorHierarchy::new(ColliderConstructor::ConvexDecompositionFromMesh),
-    ));*/
+    ));
 
     #[cfg(feature = "dev")]
     {

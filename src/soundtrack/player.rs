@@ -40,7 +40,7 @@ pub struct SoundtrackPlay {
 
 pub fn setup_player_bus(mut commands: Commands) {
     commands
-        .spawn((MultibandCompressor::default(), MusicBus))
+        .spawn((MultibandCompressor::maximus_preset_a(), MusicBus))
         .chain_node((VolumeNode::default(), MusicVolume));
     commands
         .spawn((SamplerPool(MusicPool), PoolSize(12..=36), sample_effects![VolumeNode::default()]))

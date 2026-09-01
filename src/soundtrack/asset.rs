@@ -1,5 +1,3 @@
-use std::{self, fmt::Debug};
-
 use crate::prelude::*;
 
 define_label!(
@@ -69,6 +67,22 @@ impl SoundtrackLabel for String {
 
     fn dyn_clone(&self) -> Box<dyn SoundtrackLabel + 'static> {
         Box::new(&*String::leak(self.clone()))
+    }
+}
+
+impl SoundtrackLabel for Cow<'static, str> {
+    fn path(&self) -> &str {
+        match self {
+            Self::Borrowed(this) => SoundtrackLabel::path(this),
+            Self::Owned(this) => SoundtrackLabel::path(this),
+        }
+    }
+
+    fn dyn_clone(&self) -> Box<dyn SoundtrackLabel> {
+        match self {
+            Self::Borrowed(this) => SoundtrackLabel::dyn_clone(this),
+            Self::Owned(this) => SoundtrackLabel::dyn_clone(this),
+        }
     }
 }
 
@@ -202,7 +216,7 @@ impl AssetLoader for SoundtrackLoader {
     async fn load(&self, reader: &mut dyn Reader, _: &Self::Settings, load_context: &mut LoadContext<'_>) -> Result<Self::Asset, Self::Error> {
         #[derive(Deserialize)]
         struct File {
-            loop_marker: u64,
+            loop_marker: Option<u64>,
             entries: Vec<PathBuf>,
         }
 
@@ -212,6 +226,10 @@ impl AssetLoader for SoundtrackLoader {
 
         let mut soundtrack = Soundtrack { entries: HashMap::new() };
         let file = ron::de::from_bytes::<File>(&bytes)?;
+
+        let mut longest = 0;
+        let mut entries = Vec::with_capacity(file.entries.len());
+
         for entry in file.entries {
             let src = load_context
                 .load_builder()
@@ -223,19 +241,23 @@ impl AssetLoader for SoundtrackLoader {
             let source = src.get();
             let original_sample_rate = src.original_sample_rate();
 
+            longest = longest.max(source.len_frames());
+            entries.push((label, original_sample_rate, SoundtrackEntry {
+                source,
+                original_sample_rate,
+                loop_marker: 0,
+            }));
+        }
+
+        for (label, original_sample_rate, mut entry) in entries {
+            entry.loop_marker = match file.loop_marker {
+                None => longest,
+                Some(loop_marker) => loop_marker,
+            };
+
             soundtrack.entries.insert(
                 label.intern(),
-                load_context.add_labeled_asset(
-                    label,
-                    AudioSample::new(
-                        SoundtrackEntry {
-                            source,
-                            original_sample_rate,
-                            loop_marker: file.loop_marker,
-                        },
-                        original_sample_rate,
-                    ),
-                ),
+                load_context.add_labeled_asset(label, AudioSample::new(entry, original_sample_rate)),
             );
         }
 
