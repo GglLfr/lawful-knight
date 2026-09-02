@@ -57,7 +57,6 @@ default = ["dev"]
 dev = [
     "bevy/dev",
     "bevy/default_font",
-    "bevy/pan_camera",
     "bevy_skein/brp",
     "bevy_skein/presets",
     "bevy_seedling/dev",

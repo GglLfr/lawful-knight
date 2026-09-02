@@ -1,32 +1,37 @@
 use crate::prelude::*;
 
-mod ground;
-pub use ground::*;
+mod surface;
+pub use surface::*;
 
-#[derive(Reflect, PhysicsLayer, Debug, Default, Clone, Copy)]
-#[reflect(Debug, Default, Clone)]
-pub enum ControlLayers {
-    // NOTE: Do not rearrange these, ever!
-    #[default]
-    Default,
-    Surface,
+#[derive(Component)]
+struct Player;
+
+#[derive(InputAction)]
+#[action_output(Vec2)]
+struct Move;
+
+pub fn add_player(mut commands: Commands) {
+    commands.spawn((
+        Player,
+        RigidBody::Dynamic,
+        Collider::sphere(0.5),
+        Transform::from_xyz(0., 1., 0.),
+        actions!(
+            Player[(
+                Action::<Move>::new(),
+                DeadZone::default(),
+                SmoothNudge::default(),
+                DeltaScale::default(),
+                Bindings::spawn(Cardinal::wasd_keys()),
+            )]
+        ),
+    ));
 }
-
-impl ControlLayers {
-    pub fn with_default() -> CollisionLayers {
-        CollisionLayers::new([Self::Default], [Self::Default])
-    }
-
-    pub fn control_surface() -> CollisionLayers {
-        CollisionLayers::new([Self::Surface], [] as [Self; 0])
-    }
-}
-
-#[derive(Reflect, Component, Debug, Default, Clone, Copy)]
-#[reflect(Component, Debug, Default, Clone)]
-pub struct ControlSurface;
 
 pub(super) fn plugin(app: &mut App) {
-    app.insert_skein_preset("default", ControlLayers::with_default())
-        .insert_skein_preset("surface", ControlLayers::control_surface());
+    app.add_plugins(surface::plugin)
+        // Gravity isn't uniform in this game. Simulate using linear acceleration directly.
+        .insert_resource(Gravity(Vec3::ZERO))
+        .add_input_context::<Player>()
+        .add_systems(Startup, add_player);
 }

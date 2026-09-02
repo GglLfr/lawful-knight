@@ -6,6 +6,7 @@ pub mod prelude {
         cmp::Ordering,
         f32::consts::{PI, SQRT_2, TAU},
         fmt::Debug,
+        hash::Hasher,
         mem::replace,
         num::{NonZeroU32, NonZeroUsize},
         ops::{Mul, Range},
@@ -33,7 +34,7 @@ pub mod prelude {
             component::Mutable,
             define_label,
             entity::{EntityHashMap, EntityHashSet},
-            intern::Interned,
+            intern::{Internable, Interned, Interner},
             lifecycle::HookContext,
             query::{QueryData, QueryItem, ROQueryItem},
             system::{

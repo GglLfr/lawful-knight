@@ -12,19 +12,11 @@ pub(super) fn plugin(app: &mut App) {
         .insert_resource(ClearColor(Color::NONE))
         .insert_resource(GlobalAmbientLight::NONE)
         .add_systems(Startup, spawn_camera);
-
-    #[cfg(feature = "dev")]
-    {
-        use bevy::camera_controller::pan_camera::{PanCamera, PanCameraPlugin};
-
-        app.add_plugins(PanCameraPlugin)
-            .register_required_components_with::<PrimaryCamera, PanCamera>(|| PanCamera { pan_speed: 10., ..default() });
-    }
 }
 
 pub const DEFAULT_CAMERA_DISTANCE: f32 = 20.;
 
-// TODO turn this into BSN once FogVolume implements FromTemplate
+// TODO turn this into BSN once `FogVolume` implements `FromTemplate`
 pub fn camera_fog() -> impl Bundle {
     (
         FogVolume {
