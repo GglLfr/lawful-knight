@@ -1,7 +1,8 @@
 use crate::prelude::*;
 
-pub mod portal;
+//TODO overhaul portal physics and rendering
+//pub mod portal;
 
 pub(super) fn plugin(app: &mut App) {
-    app.add_plugins(portal::plugin);
+    //app.add_plugins(portal::plugin);
 }

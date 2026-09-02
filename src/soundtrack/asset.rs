@@ -1,17 +1,74 @@
+use std::hash::Hasher;
+
+use bevy::ecs::intern::{Internable, Interner};
+
 use crate::prelude::*;
 
-define_label!(
-    SoundtrackLabel,
-    SOUNDTRACK_LABEL_INTERNER,
-    extra_methods: {
-        fn path(&self) -> &str;
-    },
-    extra_methods_impl: {
-        fn path(&self) -> &str {
-            SoundtrackLabel::path(&**self)
+static INTERNER: Interner<SoundtrackLabel> = Interner::new();
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
+pub struct SoundtrackLabel(pub str);
+impl<'a> From<&'a str> for &'a SoundtrackLabel {
+    fn from(value: &'a str) -> Self {
+        unsafe { &*(value as *const str as *const SoundtrackLabel) }
+    }
+}
+
+impl<'a> From<&'a mut str> for &'a mut SoundtrackLabel {
+    fn from(value: &'a mut str) -> Self {
+        unsafe { &mut *(value as *mut str as *mut SoundtrackLabel) }
+    }
+}
+
+impl Internable for SoundtrackLabel {
+    fn leak(&self) -> &'static Self {
+        (&*Box::leak(self.0.to_string().into_boxed_str())).into()
+    }
+
+    fn ref_eq(&self, other: &Self) -> bool {
+        self.0.ref_eq(&other.0)
+    }
+
+    fn ref_hash<H: Hasher>(&self, state: &mut H) {
+        self.0.ref_hash(state);
+    }
+}
+
+pub trait SoundtrackLabelInfo {
+    fn path(&self) -> &str;
+
+    fn intern(&self) -> Interned<SoundtrackLabel> {
+        INTERNER.intern(self.path().into())
+    }
+}
+
+impl SoundtrackLabelInfo for Interned<SoundtrackLabel> {
+    fn path(&self) -> &str {
+        &self.0.0
+    }
+}
+
+impl SoundtrackLabelInfo for &'static str {
+    fn path(&self) -> &str {
+        self
+    }
+}
+
+impl SoundtrackLabelInfo for String {
+    fn path(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl SoundtrackLabelInfo for Cow<'static, str> {
+    fn path(&self) -> &str {
+        match self {
+            Self::Borrowed(this) => SoundtrackLabelInfo::path(this),
+            Self::Owned(this) => SoundtrackLabelInfo::path(this),
         }
     }
-);
+}
 
 #[macro_export]
 macro_rules! soundtrack_label {
@@ -19,77 +76,24 @@ macro_rules! soundtrack_label {
         $(#[path = $entry_path:expr] $entry_name:ident,)*
     }) => {
         $(#[$attr])*
-        #[derive(Clone, Debug, Eq)]
         $vis enum $name {
             $($entry_name,)*
         }
 
-        impl ::std::cmp::PartialEq for $name {
-            fn eq(&self, other: &Self) -> bool {
-                ::std::cmp::PartialEq::eq(crate::soundtrack::SoundtrackLabel::path(self), crate::soundtrack::SoundtrackLabel::path(other))
-            }
-        }
-
-        impl ::std::hash::Hash for $name {
-            fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
-                crate::soundtrack::SoundtrackLabel::path(self).hash(state)
-            }
-        }
-
-        impl crate::soundtrack::SoundtrackLabel for $name {
+        impl crate::soundtrack::SoundtrackLabelInfo for $name {
             fn path(&self) -> &str {
                 match self {
                     $(Self::$entry_name => $entry_path,)*
                 }
             }
-
-            fn dyn_clone(&self) -> Box<dyn crate::soundtrack::SoundtrackLabel + 'static> {
-                Box::new(self.clone())
-            }
         }
     };
-}
-
-impl SoundtrackLabel for &'static str {
-    fn path(&self) -> &str {
-        self
-    }
-
-    fn dyn_clone(&self) -> Box<dyn SoundtrackLabel + 'static> {
-        Box::new(*self)
-    }
-}
-
-impl SoundtrackLabel for String {
-    fn path(&self) -> &str {
-        self.as_str()
-    }
-
-    fn dyn_clone(&self) -> Box<dyn SoundtrackLabel + 'static> {
-        Box::new(&*String::leak(self.clone()))
-    }
-}
-
-impl SoundtrackLabel for Cow<'static, str> {
-    fn path(&self) -> &str {
-        match self {
-            Self::Borrowed(this) => SoundtrackLabel::path(this),
-            Self::Owned(this) => SoundtrackLabel::path(this),
-        }
-    }
-
-    fn dyn_clone(&self) -> Box<dyn SoundtrackLabel> {
-        match self {
-            Self::Borrowed(this) => SoundtrackLabel::dyn_clone(this),
-            Self::Owned(this) => SoundtrackLabel::dyn_clone(this),
-        }
-    }
 }
 
 #[derive(TypePath, Asset, Clone)]
 pub struct Soundtrack {
     #[dependency]
-    pub entries: HashMap<Interned<dyn SoundtrackLabel>, Handle<AudioSample>>,
+    pub entries: HashMap<Interned<SoundtrackLabel>, Handle<AudioSample>>,
 }
 
 pub struct SoundtrackEntry {

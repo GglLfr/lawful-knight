@@ -1,7 +1,7 @@
 use crate::soundtrack_label;
 
 soundtrack_label! {
-    #[derive(Copy)]
+    #[derive(Debug, Clone, Copy)]
     pub enum BehindTheMirror {
         #[path = "behind_the_mirror_arp.ogg"]
         Arp,

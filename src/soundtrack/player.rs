@@ -1,3 +1,5 @@
+use bevy_seedling::pool::Sampler;
+
 use crate::{
     prelude::*,
     soundtrack::{Soundtrack, SoundtrackLabel, effects::MultibandCompressor},
@@ -18,7 +20,7 @@ impl AsAssetId for SoundtrackPlayer {
 #[derive(Reflect, Component, Default, Debug, Clone)]
 #[reflect(opaque, Component, Default, Debug, Clone)]
 pub struct SoundtrackState {
-    pub entries: HashMap<Interned<dyn SoundtrackLabel>, Entity>,
+    pub entries: HashMap<Interned<SoundtrackLabel>, Entity>,
 }
 
 #[derive(Reflect, PoolLabel, FromTemplate, PartialEq, Eq, Debug, Hash, Clone)]
@@ -51,26 +53,49 @@ pub fn insert_player_state(
     mut commands: Commands,
     soundtracks: Res<Assets<Soundtrack>>,
     players: Query<(Entity, &SoundtrackPlayer, &mut SoundtrackState), Or<(Changed<SoundtrackPlayer>, AssetChanged<SoundtrackPlayer>)>>,
+    playing_entries: Query<&Sampler>,
 ) {
     for (entity, player, mut state) in players {
         let Some(soundtrack) = soundtracks.get(&player.0) else { continue };
-        for (&key, sample) in &soundtrack.entries {
-            let sample_bundle = (
-                SamplePlayer::new(sample.clone()).looping(),
-                SamplerConfig {
-                    num_declickers: 0,
-                    ..default()
-                },
-                PlaybackSettings::default().preserve(),
-                MusicPool,
-            );
+        let mut head = None;
 
+        for (&key, sample) in &soundtrack.entries {
+            let player = SamplePlayer::new(sample.clone()).looping();
             match state.entries.entry(key) {
                 Entry::Occupied(entry) => {
-                    commands.entity(*entry.get()).insert(sample_bundle);
+                    let e = *entry.get();
+                    commands.entity(e).insert(player);
+
+                    if head.is_none()
+                        && let Ok(sampler) = playing_entries.get(e)
+                        && let Some(frames) = sampler.try_playhead_frames()
+                    {
+                        head = Some(frames.0.cast_unsigned());
+                    }
                 }
                 Entry::Vacant(entry) => {
-                    entry.insert(commands.spawn((ChildOf(entity), sample_bundle)).id());
+                    entry.insert(
+                        commands
+                            .spawn((
+                                ChildOf(entity),
+                                player,
+                                PlaybackSettings::default().preserve(),
+                                SamplerConfig {
+                                    num_declickers: 0,
+                                    ..default()
+                                },
+                                MusicPool,
+                            ))
+                            .id(),
+                    );
+                }
+            }
+
+            if let Some(head) = head {
+                for &e in state.entries.values() {
+                    commands
+                        .entity(e)
+                        .insert(PlaybackSettings::default().preserve().with_play_from(PlayFrom::Frames(head)));
                 }
             }
         }

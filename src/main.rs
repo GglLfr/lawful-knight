@@ -102,7 +102,7 @@ use bevy_seedling::sample::AudioLoaderConfig;
 use symphonia_adapter_libopus::OpusDecoder;
 
 use crate::{
-    environment::portal::PortalCollisionHooks,
+    //environment::portal::PortalCollisionHooks,
     prelude::*,
     soundtrack::{SoundtrackPlay, SoundtrackPlayer, SoundtrackState},
 };
@@ -147,19 +147,13 @@ fn main() -> AppExit {
                 }),
                 ..default()
             }),
-            #[cfg(feature = "dev")]
-            FpsOverlayPlugin::default(), /* .set(WindowPlugin {
-                                             primary_window: Some(Window {
-                                                 decorations: false,
-                                                 resolution: [720; 2].into(),
-                                                 ..default()
-                                             }),
-                                             ..default()
-                                         })*/
             report_mimalloc_version,
+            #[cfg(feature = "dev")]
+            FpsOverlayPlugin::default(),
             FramepacePlugin,
-            PhysicsPlugins::default().with_collision_hooks::<PortalCollisionHooks>(),
-            //PhysicsDebugPlugin,
+            PhysicsPlugins::default(), //.with_collision_hooks::<PortalCollisionHooks>(),
+            #[cfg(feature = "dev")]
+            PhysicsDebugPlugin,
             EnhancedInputPlugin,
             SeedlingPlugins,
             SkeinPlugin {
@@ -170,37 +164,12 @@ fn main() -> AppExit {
         ))
         .init_state::<GameState>()
         .add_systems(Startup, game_init)
-        .add_systems(Update, move_around)
         .run()
-}
-
-#[derive(Component)]
-struct Shift(f32, bool, bool);
-
-fn move_around(time: Res<Time>, mut transforms: Query<(&mut Transform, &Shift)>) {
-    let t = (time.elapsed_secs() / 2.).fract();
-    for (trns, mov) in &mut transforms {
-        let trns = trns.into_inner();
-        trns.translation.y = match (mov.1, mov.2) {
-            (false, false) => mov.0 - t * 7.5,
-            (false, true) => mov.0 - t * 7.5 + 7.5,
-            (true, false) => mov.0 + t * 7.5,
-            (true, true) => mov.0 + t * 7.5 - 7.5,
-        };
-
-        trns.scale.x = match (mov.1, mov.2) {
-            (false, false) | (true, false) => t * 15.,
-            (false, true) | (true, true) => (1. - t) * 15.,
-        };
-    }
 }
 
 fn game_init(mut commands: Commands, server: Res<AssetServer>, mut next: ResMut<NextState<GameState>>) {
     next.set(GameState::InGame);
-    commands.spawn((
-        WorldAssetRoot(server.load(GltfAssetLabel::Scene(0).from_asset("zones/zone_midway.gltf"))),
-        ColliderConstructorHierarchy::new(ColliderConstructor::ConvexDecompositionFromMesh),
-    ));
+    commands.spawn(WorldAssetRoot(server.load(GltfAssetLabel::Scene(0).from_asset("zones/zone_midway.gltf"))));
 
     #[cfg(feature = "dev")]
     {
@@ -219,51 +188,59 @@ fn game_init(mut commands: Commands, server: Res<AssetServer>, mut next: ResMut<
             .spawn(SoundtrackPlayer(server.load("soundtracks/midway/behind_the_mirror.mus.ron")))
             .observe(
                 move |played: On<SoundtrackPlay>, mut commands: Commands, state: Query<&SoundtrackState>| -> Result {
+                    use std::collections::BTreeMap;
+
+                    use crate::soundtrack::SoundtrackLabelInfo;
+
+                    commands.entity(root).despawn_children();
+
                     let state = state.get(played.entity)?;
+                    let mut map = BTreeMap::new();
                     for (key, &sample_entity) in &state.entries {
+                        map.insert(key.path(), sample_entity);
+                    }
+
+                    for (key, sample_entity) in map {
                         use bevy::{
                             picking::hover::Hovered,
                             ui_widgets::{Activate, Button},
                         };
 
-                        let key_name = key.path().to_string();
-                        commands
-                            .spawn_scene(bsn! {
-                                ChildOf(root)
-                                Node {
-                                    padding: UiRect::all(px(16))
-                                }
-                                BackgroundColor(ACTIVATED)
-                                Button
-                                Hovered
-                                Children [
-                                    Text::new(key_name)
-                                ]
+                        let key_name = key.to_string();
+                        commands.spawn_scene(bsn! {
+                            ChildOf(root)
+                            Node {
+                                padding: UiRect::all(px(16))
+                            }
+                            BackgroundColor(ACTIVATED)
+                            Button
+                            Hovered
+                            on(move |activated: On<Activate>,
+                                  mut query: Query<&mut BackgroundColor>,
+                                  effects: Query<&SampleEffects>,
+                                  mut volume: Query<&mut VolumeNode>|
+                                  -> Result {
+                                let mut bg = query.get_mut(activated.entity)?;
+                                let effects = effects.get(sample_entity)?;
+
+                                let volume = volume.get_effect_mut(effects)?.into_inner();
+                                volume.volume = match volume.volume.linear() {
+                                    0. => {
+                                        bg.0 = ACTIVATED;
+                                        Volume::Linear(1.)
+                                    }
+                                    _ => {
+                                        bg.0 = UNACTIVATED;
+                                        Volume::Linear(0.)
+                                    }
+                                };
+
+                                Ok(())
                             })
-                            .observe(
-                                move |activated: On<Activate>,
-                                      mut query: Query<&mut BackgroundColor>,
-                                      effects: Query<&SampleEffects>,
-                                      mut volume: Query<&mut VolumeNode>|
-                                      -> Result {
-                                    let mut bg = query.get_mut(activated.entity)?;
-                                    let effects = effects.get(sample_entity)?;
-
-                                    let volume = volume.get_effect_mut(effects)?.into_inner();
-                                    volume.volume = match volume.volume.linear() {
-                                        0. => {
-                                            bg.0 = ACTIVATED;
-                                            Volume::Linear(1.)
-                                        }
-                                        _ => {
-                                            bg.0 = UNACTIVATED;
-                                            Volume::Linear(0.)
-                                        }
-                                    };
-
-                                    Ok(())
-                                },
-                            );
+                            Children [
+                                Text::new(key_name)
+                            ]
+                        });
                     }
 
                     Ok(())
