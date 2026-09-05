@@ -5,16 +5,20 @@ pub mod prelude {
         cell::RefCell,
         cmp::Ordering,
         f32::consts::{PI, SQRT_2, TAU},
-        fmt::Debug,
+        fmt::{Debug, Write as FmtWrite},
         hash::Hasher,
         mem::replace,
         num::{NonZeroU32, NonZeroUsize},
-        ops::{Mul, Range},
+        ops::{Deref, Mul, Range},
         path::PathBuf,
         ptr::addr_eq,
     };
 
-    pub use avian3d::{physics_transform::PhysicsTransformSystems, prelude::*};
+    pub use avian3d::{
+        math::{Matrix3, Scalar, Vector3},
+        physics_transform::PhysicsTransformSystems,
+        prelude::*,
+    };
     #[cfg(feature = "dev")]
     pub use bevy::dev_tools::fps_overlay::FpsOverlayPlugin;
     pub use bevy::{
@@ -71,6 +75,7 @@ pub mod prelude {
         shader::{ShaderDefVal, ShaderRef},
         utils::Parallel,
         window::{PrimaryWindow, WindowCreated, WindowResized, WindowScaleFactorChanged},
+        world_serialization::{WorldInstance, WorldInstanceReady},
     };
     pub use bevy_enhanced_input::prelude::{self::*, Cancel, Press, Release};
     pub use bevy_framepace::FramepacePlugin;
